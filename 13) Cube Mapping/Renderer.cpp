@@ -31,7 +31,8 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	}
 	SetTextureRepeating(earthTex, true);
 	SetTextureRepeating(earthBump, true);
-	SetTextureRepeating(waterTex, true);	reflectShader = new Shader(
+	SetTextureRepeating(waterTex, true);
+	reflectShader = new Shader(
 		"reflectVertex.glsl", "reflectFragment.glsl");
 	skyboxShader = new Shader(
 		"skyboxVertex.glsl", "skyboxFragment.glsl");
@@ -42,7 +43,8 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 		!skyboxShader->LoadSuccess() ||
 		!lightShader->LoadSuccess()) {
 		return;
-	}	Vector3 heightmapSize = heightMap->GetHeightmapSize();
+	}
+	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
 	camera = new Camera(-45.0f, 0.0f,
 		heightmapSize * Vector3(0.5f, 5.0f, 0.5f));
@@ -58,7 +60,9 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
-	init = true;}	Renderer::~Renderer(void){
+	init = true;
+}
+	Renderer::~Renderer(void){
 		delete camera;
 		delete heightMap;
 		delete quad;
@@ -66,7 +70,8 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 		delete skyboxShader;
 		delete lightShader;
 		delete light;
-	}	void Renderer::UpdateScene(float dt) {
+	}
+	void Renderer::UpdateScene(float dt) {
 		camera->UpdateCamera(dt);
 		viewMatrix = camera->BuildViewMatrix();
 		waterRotate += dt * 2.0f;//2degreesasecond
@@ -87,7 +92,8 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 		quad->Draw();
 
 		glDepthMask(GL_TRUE);
-	}	void Renderer::DrawHeightmap() {
+	}
+	void Renderer::DrawHeightmap() {
 		BindShader(lightShader);
 		SetShaderLight(*light);
 		glUniform3fv(glGetUniformLocation(lightShader->GetProgram(),
@@ -141,4 +147,4 @@ Renderer::Renderer(Window &parent) :OGLRenderer(parent) {
 		UpdateShaderMatrices();
 		//SetShaderLight(*light);//Nolightinginthisshader!
 		quad->Draw();
-	}
+	}

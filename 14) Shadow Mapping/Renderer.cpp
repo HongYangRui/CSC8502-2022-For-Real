@@ -36,9 +36,9 @@ Renderer::Renderer(Window& parent) :OGLRenderer(parent) {
 	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Cylinder.msh"));
 	sceneMeshes.emplace_back(Mesh::LoadFromMeshFile("Cone.msh"));
 
-	sceneDiffuse = SOIL_load_OGL_texture(TEXTUREDIR"BarrenReds.JPG",
+	sceneDiffuse = SOIL_load_OGL_texture(TEXTUREDIR"Barren Reds.JPG",
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
-	sceneBump = SOIL_load_OGL_texture(TEXTUREDIR"BarrenRedsDOT3.JPG",
+	sceneBump = SOIL_load_OGL_texture(TEXTUREDIR"Barren RedsDOT3.JPG",
 		SOIL_LOAD_AUTO, SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS);
 	SetTextureRepeating(sceneDiffuse, true);
 	SetTextureRepeating(sceneBump, true);
