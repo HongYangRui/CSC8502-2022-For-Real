@@ -1,11 +1,10 @@
  #include "Renderer.h"
-
+#include"../nclgl/MeshMaterial.h"
  Renderer::Renderer(Window & parent) : OGLRenderer(parent) {
 	cube = Mesh::LoadFromMeshFile("OffsetCubeY.msh");
 	camera = new Camera();
-	
-	shader = new Shader("SceneVertex.glsl","SceneFragment.glsl");
-	
+	/*shader=new Shader("PerPixelVertex.glsl","PerPixelFragment.glsl");*/
+	shader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
 		if (!shader -> LoadSuccess()) {
 		 return;
 		
@@ -21,6 +20,21 @@
 	
 	 glEnable(GL_DEPTH_TEST);
 	 init = true;
+
+	 shipMesh = Mesh::LoadFromMeshFile("F3_Red.msh");
+	 shipMaterial = new MeshMaterial("F3_Red.mat");
+	 for (int i = 0; i < shipMesh->GetSubMeshCount(); ++i) {
+		 const MeshMaterialEntry* matEntry =
+			 shipMaterial->GetMaterialForLayer(i);
+
+		 const string* filename = nullptr;
+		 matEntry->GetEntry("Diffuse", &filename);
+		 string path = TEXTUREDIR + *filename;
+		 GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO,
+			 SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		 matTextures.emplace_back(texID);
+	 }
+	 
 	
 }
 
@@ -29,7 +43,8 @@
 	 delete shader;
 	 delete camera;
 	 delete cube;
-	} void Renderer::UpdateScene(float dt) {
+
+	 delete shipMesh;	 delete shipMaterial;} void Renderer::UpdateScene(float dt) {
 	camera -> UpdateCamera(dt);
 	viewMatrix = camera -> BuildViewMatrix();
 	root -> Update(dt);
@@ -43,10 +58,18 @@
 	 UpdateShaderMatrices();
 	
 	 glUniform1i(glGetUniformLocation(shader -> GetProgram(),
+		 "diffuseTex"), 0);
+	
+	 for (int i = 0; i < shipMesh->GetSubMeshCount(); ++i) {
+		 glActiveTexture(GL_TEXTURE0);
+		 glBindTexture(GL_TEXTURE_2D, matTextures[i]);
+		 shipMesh->DrawSubMesh(i);
+		 
+	 }
+
+	/* glUniform1i(glGetUniformLocation(shader->GetProgram(),
 		 "diffuseTex"), 1);
-	
-	 DrawNode(root);
-	
+	DrawNode(root);*/
 }
  void Renderer::DrawNode(SceneNode * n) {
 	 if (n -> GetMesh()) {

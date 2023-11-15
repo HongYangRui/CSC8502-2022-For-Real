@@ -3,6 +3,8 @@
 #include"../nclgl/Heightmap.h"
 #include"../nclgl/Shader.h"
 #include"../nclgl/Camera.h"
+#include"../nclgl/MeshAnimation.h"
+#include"../nclgl/MeshMaterial.h"
 
 Renderer::Renderer(Window& parent) :OGLRenderer(parent) {
 	quad = Mesh::GenerateQuad();
@@ -37,22 +39,24 @@ Renderer::Renderer(Window& parent) :OGLRenderer(parent) {
 	skyboxShader = new Shader(
 		"skyboxVertex.glsl", "skyboxFragment.glsl");
 	lightShader = new Shader(
-		"PerPixelVertex.glsl", "PerPixelFragment.glsl");
-
+		"BumpVertex.glsl", "BumpFragment.glsl");
+	shader = new Shader("SkinningVertex.glsl", "texturedFragment.glsl");
+	mesh = Mesh::LoadFromMeshFile("Role_T.msh");
+	anim = new MeshAnimation("Role_T.anm");
+	material = new MeshMaterial("Role_T.mat");
 	if (!reflectShader->LoadSuccess() ||
 		!skyboxShader->LoadSuccess() ||
-		!lightShader->LoadSuccess()) {
+		!lightShader->LoadSuccess() || !shader->LoadSuccess()) {
 		return;
 	}
 	Vector3 heightmapSize = heightMap->GetHeightmapSize();
 
-	camera = new Camera(-45.0f, 0.0f,
-		heightmapSize * Vector3(0.5f, 5.0f, 0.5f));
 	light = new Light(heightmapSize * Vector3(0.5f, 1.5f, 0.5f),
 		Vector4(1, 1, 1, 1), heightmapSize.x);
 
-	projMatrix = Matrix4::Perspective(1.0f, 15000.0f,
+	projMatrix = Matrix4::Perspective(1.0f, 10000.0f,
 		(float)width / (float)height, 45.0f);
+	camera = new Camera(-3, 0.0f, Vector3(0, 1.4f, 4.0f));
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -60,7 +64,34 @@ Renderer::Renderer(Window& parent) :OGLRenderer(parent) {
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 	waterRotate = 0.0f;
 	waterCycle = 0.0f;
+	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry =
+			material->GetMaterialForLayer(i);
+
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO,
+			SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		matTextures.emplace_back(texID);
+	}
+	currentFrame = 0;
+	frameTime = 0.0f;
 	init = true;
+
+	ufoShader= new Shader("ufoVertex.glsl", "ufoFragment.glsl");
+	ufoMesh = Mesh::LoadFromMeshFile("UFO.msh");
+	ufoMaterial = new MeshMaterial("UFO.mat");
+	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+		const MeshMaterialEntry* matEntry =	material->GetMaterialForLayer(i);
+		const string* filename = nullptr;
+		matEntry->GetEntry("Diffuse", &filename);
+		string path = TEXTUREDIR + *filename;
+		GLuint texID = SOIL_load_OGL_texture(path.c_str(), SOIL_LOAD_AUTO,
+			SOIL_CREATE_NEW_ID, SOIL_FLAG_MIPMAPS | SOIL_FLAG_INVERT_Y);
+		matTextures.emplace_back(texID);
+	}
+
 }
 Renderer::~Renderer(void) {
 	delete camera;
@@ -70,19 +101,71 @@ Renderer::~Renderer(void) {
 	delete skyboxShader;
 	delete lightShader;
 	delete light;
+	delete mesh;
+	delete anim;
+	delete material;
+	delete ufoMesh;
+	delete ufoMaterial;
+	delete ufoShader;
 }
 void Renderer::UpdateScene(float dt) {
-	camera->UpdateCamera(dt);
+	camera->UpdateCamera(dt*44);
 	viewMatrix = camera->BuildViewMatrix();
 	waterRotate += dt * 2.0f;//2degreesasecond
 	waterCycle += dt * 0.25f;//10unitsasecond
+
+	frameTime -= dt;
+	while (frameTime < 0.0f) {
+		currentFrame = (currentFrame + 1) % anim->GetFrameCount();
+		frameTime += 1.0f / anim->GetFrameRate();
+	}
 }
 void Renderer::RenderScene() {
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	DrawSkybox();
 	DrawHeightmap();
 	DrawWater();
+	DrawModel();
+	DrawUFO();
+	
 }
+void Renderer::DrawModel() {
+	BindShader(shader);
+	glUniform1i(glGetUniformLocation(shader->GetProgram(),
+		"diffuseTex"), 0);
+	modelMatrix = Matrix4::Translation(Vector3(1700.0f, 170.0f, 1700.0f)) * Matrix4::Scale(Vector3(10.0f, 10.0f, 10.0f));
+	UpdateShaderMatrices();
+
+	vector<Matrix4>frameMatrices;
+
+	const Matrix4* invBindPose = mesh->GetInverseBindPose();
+	const Matrix4* frameData = anim->GetJointData(currentFrame);
+
+	for (unsigned int i = 0; i < mesh->GetJointCount(); ++i) {
+		frameMatrices.emplace_back(frameData[i] * invBindPose[i]);
+	}
+
+	int j = glGetUniformLocation(shader->GetProgram(), "joints");
+	glUniformMatrix4fv(j, frameMatrices.size(), false,
+		(float*)frameMatrices.data());
+	for (int i = 0; i < mesh->GetSubMeshCount(); ++i) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, matTextures[i]);
+		mesh->DrawSubMesh(i);
+	}
+}
+void Renderer::DrawUFO() {
+	BindShader(ufoShader);
+	glUniform1i(glGetUniformLocation(ufoShader->GetProgram(),"diffuseTex"), 0);
+	UpdateShaderMatrices();
+
+	for (int i = 0; i < ufoMesh->GetSubMeshCount(); ++i) {
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, matTextures[i]);
+		ufoMesh->DrawSubMesh(i);
+	}
+}
+
 void Renderer::DrawSkybox() {
 	glDepthMask(GL_FALSE);
 
@@ -135,7 +218,7 @@ void Renderer::DrawWater() {
 	Vector3 hSize = heightMap->GetHeightmapSize();
 
 	modelMatrix =
-		Matrix4::Translation(hSize * 0.5f) *
+		Matrix4::Translation(hSize*0.5f) *
 		Matrix4::Scale(hSize * 0.5f) *
 		Matrix4::Rotation(90, Vector3(1, 0, 0));
 
@@ -147,4 +230,6 @@ void Renderer::DrawWater() {
 	UpdateShaderMatrices();
 	//SetShaderLight(*light);//Nolightinginthisshader!
 	quad->Draw();
+	modelMatrix.ToIdentity();//New!
+	textureMatrix.ToIdentity();//New!
 }

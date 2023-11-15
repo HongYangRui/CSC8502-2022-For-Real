@@ -10,5 +10,4 @@
  protected:
 	 Mesh * triangle;
 	 Shader * basicShader;
-	
 };
