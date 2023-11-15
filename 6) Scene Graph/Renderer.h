@@ -5,6 +5,9 @@
 #include "../nclgl/SceneNode.h"
 #include "../nclgl/CubeRobot.h"
 
+class Mesh;
+class MeshMaterial;
+
 class Renderer : public OGLRenderer {
 public:
  Renderer(Window & parent);
@@ -20,5 +23,8 @@ public:
 	 Camera * camera;
 	 Mesh * cube;
 	 Shader * shader;
-	
+
+	 Mesh* shipMesh;
+	 MeshMaterial* shipMaterial;
+	 vector < GLuint > matTextures;
 };

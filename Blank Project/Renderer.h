@@ -4,6 +4,11 @@ class Camera;
 class Shader;
 class HeightMap;
 
+//skeleta
+class Mesh;
+class MeshAnimation;
+class MeshMaterial;
+
 class Renderer : public OGLRenderer {
 public:
 	Renderer(Window& parent);
@@ -15,6 +20,8 @@ protected:
 	void DrawHeightmap();
 	void DrawWater();
 	void DrawSkybox();
+	void DrawModel();
+	void DrawUFO();
 
 	Shader* lightShader;
 	Shader* reflectShader;
@@ -22,7 +29,6 @@ protected:
 
 	HeightMap* heightMap;
 	Mesh* quad;
-
 	Light* light;
 	Camera* camera;
 
@@ -33,4 +39,19 @@ protected:
 
 	float waterRotate;
 	float waterCycle;
+
+	//skeletal
+	Mesh* mesh;
+	Shader* shader;
+	MeshAnimation* anim;
+	MeshMaterial* material;
+	vector<GLuint> matTextures;
+	int currentFrame;
+	float frameTime;
+
+	//spaceship
+	Mesh* ufoMesh;
+	MeshMaterial* ufoMaterial;
+	Shader* ufoShader;
+	
 };

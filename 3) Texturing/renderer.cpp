@@ -10,7 +10,7 @@
 		 return;
 		
 	}
-	 shader = new Shader("TexturedVertex.glsl", "Texturedfragment.glsl");
+	 shader = new Shader("TexturedVertex.glsl", "TexturedFragment.glsl");
 	
 		 if (!shader -> LoadSuccess()) {
 		 return;
